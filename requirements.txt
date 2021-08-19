@@ -3,3 +3,4 @@ minio==7.1.0
 pydub==0.25.1
 requests==2.26.0
 uvicorn==0.15.0
+motor==2.5.0

@@ -3,6 +3,8 @@ from typing import List
 from fastapi import APIRouter
 from server.utils.minio import Minio
 
+from .models import *
+
 router = APIRouter()
 
 
@@ -31,4 +33,5 @@ async def update_db_from_minio():
 	This endpoint will handle all the logic for checking in the Minio server
 	and updating any new files to the mongodb.
 	"""
-	return {'detail': '0 new raw files updated'}
+	ret = await Audio.refresh()
+	return {'detail': f'{ret} new raw files updated'}
