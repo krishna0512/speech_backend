@@ -16,6 +16,14 @@ async def get_all_raw_audio_files():
 	"""
 	pass
 
+@router.post('')
+async def upload_new_raw_audio():
+	"""
+	This endpoint allows upload and creation of new audio files
+	not sure, if this endpoint is applicable or not
+	"""
+	pass
+
 
 @router.post('/refresh')
 async def update_db_from_minio():

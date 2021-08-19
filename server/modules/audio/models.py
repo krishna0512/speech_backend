@@ -1,14 +1,15 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Audio(BaseModel):
 	id: str
-	minio_key: str
-	created: datetime
-	modified: datetime
-	status: str
+	minio_key: str = ''
+	created: datetime = Field(default_factory=datetime.now)
+	modified: datetime = Field(default_factory=datetime.now)
+	# status can be ["raw", "fragmented"]
+	status: str = 'raw'
 
 	@staticmethod
 	async def refresh() -> int:
