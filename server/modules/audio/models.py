@@ -20,6 +20,12 @@ class Audio(BaseModel):
 		return [Audio(**i) async for i in ret]
 
 	@staticmethod
+	async def filter(**kwargs):
+		if not kwargs:
+			return await Audio.all()
+		return await get_db()['audio'].filter(kwargs)
+
+	@staticmethod
 	async def refresh() -> int:
 		"""
 		This method handles all the logic to update the Audiofiles from
@@ -57,3 +63,6 @@ class Audio(BaseModel):
 
 	async def save(self):
 		await get_db()['audio'].insert_one(self.dict())
+
+	async def delete(self):
+		await get_db()['audio'].delete_one({'id': self.id})
