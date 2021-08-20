@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from server.config import *
 from server.database import close_mongo_connection, connect_to_mongo
 from server.modules.audio.routes import router as audio_router
-from server.modules.fragment.routes import router as fragment_router
+from server.modules.fragment.routes import router as fragments_router
 
 app = FastAPI(
 	title='Speech Data API',
@@ -20,8 +20,8 @@ app.include_router(
 )
 
 app.include_router(
-	fragment_router,
-	prefix='/fragment',
+	fragments_router,
+	prefix='/fragments',
 	tags=['Fragmentation'],
 )
 
