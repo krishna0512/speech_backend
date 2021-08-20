@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -20,10 +21,15 @@ class Audio(BaseModel):
 		return [Audio(**i) async for i in ret]
 
 	@staticmethod
-	async def filter(**kwargs):
+	async def filter(**kwargs) -> List:
 		if not kwargs:
 			return await Audio.all()
-		return await get_db()['audio'].filter(kwargs)
+		return await get_db()['audio'].find(kwargs)
+
+	@staticmethod
+	async def get(id):
+		ret = await get_db()['audio'].find_one({'id': id})
+		return Audio(**ret)
 
 	@staticmethod
 	async def refresh() -> int:
