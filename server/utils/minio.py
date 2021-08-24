@@ -45,3 +45,6 @@ class Minio:
 
 	def list_objects(self, *args, **kwargs):
 		return self.client.list_objects(*args, **kwargs)
+
+	def download(self, key, path) -> None:
+		self.client.fput_object(self.bucket_name, key, path)
