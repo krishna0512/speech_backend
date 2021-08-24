@@ -18,9 +18,11 @@ async def get_all_raw_audio_files():
 	"""
 	return await Audio.all()
 
+
 @router.get('/{id}', response_model=Audio)
 async def get_single_audio(id: str):
 	return await Audio.get(id)
+
 
 @router.delete('/{id}')
 async def delete_audio(id: str) -> str:
@@ -28,11 +30,13 @@ async def delete_audio(id: str) -> str:
 	await ret.delete()
 	return {'detail': f'1 audio record deleted'}
 
-@router.delete('/all')
+
+@router.delete('')
 async def delete_all_audio() -> str:
 	ret = await Audio.all()
 	[await i.delete() for i in ret]
 	return {'detail': f'{len(ret)} audio records deleted'}
+
 
 @router.post('/refresh')
 async def update_db_from_minio():
