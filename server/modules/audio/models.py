@@ -14,7 +14,45 @@ from server.utils.minio import Minio
 from . import helpers
 
 
-class Audio(BaseModel):
+class AudioMixin:
+
+	@staticmethod
+	async def all() -> List:
+		ret = get_db()['audio'].find()
+		return [Audio(**i) async for i in ret]
+
+	@staticmethod
+	async def filter(**kwargs) -> List:
+		if not kwargs:
+			return await Audio.all()
+		ret = get_db()['audio'].find(kwargs)
+		return [Audio(**i) async for i in ret]
+
+	@staticmethod
+	async def get(id):
+		ret = await get_db()['audio'].find_one({'id': id})
+		return Audio(**ret)
+
+	async def save(self):
+		await get_db()['audio'].insert_one(self.dict())
+
+	async def update(self, **kwargs):
+		kwargs.update({'modified': datetime.now()})
+		await get_db()['audio'].update_one(
+			{'id': self.id},
+			{'$set': kwargs},
+		)
+
+	async def delete(self) -> None:
+		Minio().delete(self.minio_key)
+		await get_db()['audio'].delete_one({'id': self.id})
+
+	async def move(self, to: str) -> None:
+		mk = Minio().move(self.minio_key, to)
+		await self.update(minio_key=mk)
+
+
+class Audio(BaseModel, AudioMixin):
 	id: str = Field(default_factory=lambda: str(uuid4()))
 	# stores the name of the original audio file as referenced from
 	# minio campaign_source folder
@@ -27,22 +65,6 @@ class Audio(BaseModel):
 	# stores the campaign that this audio belongs to
 	# campaign can be ["ozonetel_webapp", "ozonetel_whatsapp"]
 	campaign: str = ''
-
-	@staticmethod
-	async def all():
-		ret = get_db()['audio'].find()
-		return [Audio(**i) async for i in ret]
-
-	@staticmethod
-	async def filter(**kwargs) -> List:
-		if not kwargs:
-			return await Audio.all()
-		return await get_db()['audio'].find(kwargs)
-
-	@staticmethod
-	async def get(id):
-		ret = await get_db()['audio'].find_one({'id': id})
-		return Audio(**ret)
 
 	@staticmethod
 	async def refresh() -> int:
@@ -74,24 +96,6 @@ class Audio(BaseModel):
 			await a.move(f'app/audio/{a.id}/{a.name}')
 		print(f'{ret} records added to mongodb')
 		return ret
-
-	async def save(self):
-		await get_db()['audio'].insert_one(self.dict())
-
-	async def update(self, **kwargs):
-		kwargs.update({'modified': datetime.now()})
-		await get_db()['audio'].update_one(
-			{'id': self.id},
-			{'$set': kwargs},
-		)
-
-	async def delete(self) -> None:
-		Minio().delete(self.minio_key)
-		await get_db()['audio'].delete_one({'id': self.id})
-
-	async def move(self, to: str) -> None:
-		mk = Minio().move(self.minio_key, to)
-		await self.update(minio_key=mk)
 
 	async def generate_fragments(self) -> List[Fragment]:
 		mc = Minio()

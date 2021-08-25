@@ -8,14 +8,7 @@ from server.database import get_db
 from server.utils.minio import Minio
 
 
-class Fragment(BaseModel):
-	id: str = Field(default_factory=lambda: str(uuid4()))
-	name: str
-	index: int
-	audio_id: str
-	minio_key: str = ''
-	created: datetime = Field(default_factory=datetime.now)
-	modified: datetime = Field(default_factory=datetime.now)
+class FragmentMixin:
 
 	@staticmethod
 	async def all() -> List:
@@ -28,6 +21,24 @@ class Fragment(BaseModel):
 			return await Fragment.all()
 		ret = get_db()['fragments'].find(kwargs).sort('index')
 		return [Fragment(**i) async for i in ret]
+
+	async def save(self):
+		await get_db()['fragments'].insert_one(self.dict())
+
+	async def delete(self):
+		Minio().delete(self.minio_key)
+		await get_db()['fragments'].delete_one({'id': self.id})
+
+
+
+class Fragment(FragmentMixin, BaseModel):
+	id: str = Field(default_factory=lambda: str(uuid4()))
+	name: str
+	index: int
+	audio_id: str
+	minio_key: str = ''
+	created: datetime = Field(default_factory=datetime.now)
+	modified: datetime = Field(default_factory=datetime.now)
 
 	@staticmethod
 	async def create(audio_id, filepath):
@@ -48,10 +59,3 @@ class Fragment(BaseModel):
 		ret.minio_key = key
 		await ret.save()
 		return ret
-
-	async def save(self):
-		await get_db()['fragments'].insert_one(self.dict())
-
-	async def delete(self):
-		Minio().delete(self.minio_key)
-		await get_db()['fragments'].delete_one({'id': self.id})
