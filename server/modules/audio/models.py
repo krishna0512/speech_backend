@@ -105,3 +105,8 @@ class Audio(BaseModel):
 			),
 		)
 		return frags
+
+	async def get_fragments(self) -> List[Fragment]:
+		if self.status == 'raw':
+			return []
+		return await Fragment.filter(audio_id=self.id)

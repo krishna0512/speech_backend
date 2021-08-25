@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -14,15 +15,16 @@ class Fragment(BaseModel):
 	modified: datetime = Field(default_factory=datetime.now)
 
 	@staticmethod
-	async def all():
+	async def all() -> List:
 		ret = get_db()['fragments'].find()
 		return [Fragment(**i) async for i in ret]
 
 	@staticmethod
-	async def filter(**kwargs):
+	async def filter(**kwargs) -> List:
 		if not kwargs:
 			return await Fragment.all()
-		return await get_db()['fragments'].filter(kwargs)
+		ret = get_db()['fragments'].find(kwargs)
+		return [Fragment(**i) async for i in ret]
 
 	@staticmethod
 	async def create(audio_id, filepath):

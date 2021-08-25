@@ -53,3 +53,9 @@ async def update_db_from_minio():
 async def fragment_raw_audio(id: str) -> List[Fragment]:
 	audio = await Audio.get(id)
 	return await audio.generate_fragments()
+
+
+@router.get('/{id}/fragments', response_model=List[Fragment])
+async def get_fragments_for_audio(id: str) -> List[Fragment]:
+	audio = await Audio.get(id)
+	return await audio.get_fragments()
