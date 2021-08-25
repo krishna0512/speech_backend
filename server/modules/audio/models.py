@@ -6,6 +6,7 @@ from typing import List
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
+from server.config import *
 from server.database import get_db
 from server.modules.fragment.models import Fragment
 from server.utils.minio import Minio
@@ -51,12 +52,8 @@ class Audio(BaseModel):
 
 		@returns: int, the number of new files added to the mongodb
 		"""
-		paths = [
-			'campaign_source/ozonetel_webapp',
-			'campaign_source/ozonetel_whatsapp',
-		]
 		files = []
-		for prefix in paths:
+		for prefix in MINIO_CAMPAIGN_SOURCES:
 			files += [i.object_name for i in Minio().list_objects(
 				'speech-data-prod',
 				prefix=prefix,
