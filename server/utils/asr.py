@@ -14,6 +14,8 @@ def telugu(audio_url) -> str:
 	}
 
 	r = requests.post(url, headers=headers, data=json.dumps(payload))
+	if r.status_code != 200:
+		return 'Error in ASR'
 	ret = r.json()['scriptedText'].strip()
 	print(f'Telugu ASR output: {ret}')
 	return ret

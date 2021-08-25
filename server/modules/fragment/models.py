@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 from server.database import get_db
+from server.utils import asr as ASR
 from server.utils.minio import Minio
 
 
@@ -22,8 +23,20 @@ class FragmentMixin:
 		ret = get_db()['fragments'].find(kwargs).sort('index')
 		return [Fragment(**i) async for i in ret]
 
+	@staticmethod
+	async def get(id):
+		ret = await get_db()['fragments'].find_one({'id': id})
+		return Fragment(**ret)
+
 	async def save(self):
 		await get_db()['fragments'].insert_one(self.dict())
+
+	async def update(self, **kwargs):
+		kwargs.update({'modified': datetime.now()})
+		await get_db()['fragments'].update_one(
+			{'id': self.id},
+			{'$set': kwargs},
+		)
 
 	async def delete(self):
 		Minio().delete(self.minio_key)
@@ -39,6 +52,7 @@ class Fragment(FragmentMixin, BaseModel):
 	minio_key: str = ''
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
+	asr: str = ''
 
 	@staticmethod
 	async def create(audio_id, filepath):
@@ -57,4 +71,10 @@ class Fragment(FragmentMixin, BaseModel):
 		Minio().upload_fileobj(open(filepath, 'rb'), key)
 		ret.minio_key = key
 		await ret.save()
+		return ret
+
+	async def perform_asr(self) -> str:
+		url = Minio().get_fileurl(self.minio_key)
+		ret = ASR.telugu(url)
+		await self.update(asr=ret)
 		return ret
