@@ -46,4 +46,5 @@ class Fragment(BaseModel):
 		await get_db()['fragments'].insert_one(self.dict())
 
 	async def delete(self):
+		Minio().delete(self.minio_key)
 		await get_db()['fragments'].delete_one({'id': self.id})
