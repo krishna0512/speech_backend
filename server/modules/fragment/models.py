@@ -46,7 +46,6 @@ class Fragment(FragmentMixin, BaseModel):
 		Creates a new fragment record given the audio and filepath of 
 		fragment audio file in the local machine
 		"""
-		print(f'Creating fragment from file: {filepath}')
 		name = os.path.basename(filepath)
 		index = int(name.strip().split('_')[-1].split('.')[0])
 		ret = Fragment(

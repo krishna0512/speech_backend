@@ -10,6 +10,7 @@ from server.config import *
 from server.database import get_db
 from server.modules.fragment.models import Fragment
 from server.utils.minio import Minio
+from tqdm import trange
 
 from . import helpers
 
@@ -44,7 +45,10 @@ class AudioMixin:
 		)
 
 	async def delete(self) -> None:
+		if self.status == 'fragmented':
+			await self.delete_fragments()
 		Minio().delete(self.minio_key)
+		Minio().delete(f'app/audio/{self.id}')
 		await get_db()['audio'].delete_one({'id': self.id})
 
 	async def move(self, to: str) -> None:
@@ -101,10 +105,16 @@ class Audio(BaseModel, AudioMixin):
 		mc = Minio()
 		t = TemporaryDirectory(prefix='frags')
 		input_file = join(t.name, self.minio_key.split('/')[-1])
+		print(f'Downloading audio file to: {input_file}')
 		mc.download(self.minio_key, input_file)
 		output_dir = helpers.generate_fragments(t.name)
 		frag_files = [join(output_dir, f) for f in os.listdir(output_dir)]
-		frags = [await Fragment.create(self.id, i) for i in frag_files]
+		frag_files = sorted(frag_files, key=lambda x: int(x.split('_')[-1].split('.')[0]))
+		frags = []
+		for i in trange(len(frag_files), desc='Creating Fragments '):
+			frags.append(
+				await Fragment.create(self.id, frag_files[i])
+			)
 
 		await self.update(status='fragmented')
 		return frags
@@ -118,9 +128,8 @@ class Audio(BaseModel, AudioMixin):
 		if self.status == 'raw':
 			return 0
 		ret = await self.get_fragments()
-		for i in ret:
-			print(f'deleting fragment: {i.name}')
-			await i.delete()
+		for i in trange(len(ret), desc='Deleting Fragments '):
+			await ret[i].delete()
 		Minio().delete(f'app/audio/{self.id}/fragments')
 		await self.update(status='raw')
 		return len(ret)

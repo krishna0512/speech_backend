@@ -27,8 +27,8 @@ async def get_single_audio(id: str):
 
 @router.delete('/{id}')
 async def delete_audio(id: str) -> str:
-	ret = await Audio.filter(id=id)
-	await ret.delete()
+	audio = await Audio.get(id)
+	await audio.delete()
 	return {'detail': f'1 audio record deleted'}
 
 

@@ -68,7 +68,6 @@ def generate_fragments(folder):
 			os.path.join(output_dir, output_filename_prefix),
 			i+1
 		)
-		print("Writing file ", output_file_path)
 		wavfile.write(
 			filename=output_file_path,
 			rate=sr,
