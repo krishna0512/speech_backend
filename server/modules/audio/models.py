@@ -15,11 +15,17 @@ from . import helpers
 
 class Audio(BaseModel):
 	id: str = Field(default_factory=lambda: str(uuid4()))
+	# stores the name of the original audio file as referenced from
+	# minio campaign_source folder
+	name: str
 	minio_key: str = ''
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
 	# status can be ["raw", "fragmented"]
 	status: str = 'raw'
+	# stores the campaign that this audio belongs to
+	# campaign can be ["ozonetel_webapp", "ozonetel_whatsapp"]
+	campaign: str = ''
 
 	@staticmethod
 	async def all():
@@ -49,27 +55,26 @@ class Audio(BaseModel):
 			'campaign_source/ozonetel_webapp',
 			'campaign_source/ozonetel_whatsapp',
 		]
-		mc = Minio()
 		files = []
 		for prefix in paths:
-			files += [i.object_name for i in mc.list_objects(
+			files += [i.object_name for i in Minio().list_objects(
 				'speech-data-prod',
 				prefix=prefix,
 				recursive=True
 			)]
-		files = [i for i in files if i.endswith('wav')]
+		files = [i.strip(' /') for i in files if i.endswith('wav')]
 		print(f'{len(files)} audio files found in the minio')
-		audio_present = await Audio.all()
-		audio_present = [i.minio_key for i in audio_present]
-		print(f'{len(audio_present)} records found in the mongodb')
-		files = [i for i in files if i not in audio_present]
 		ret = len(files)
-		print(f'{ret} unique audio files found minio that are missing in mongodb')
 		if ret == 0:
 			return ret
 		for i in files:
-			a = Audio(minio_key=i)
+			a = Audio(
+				name=i.split('/')[-1],
+				minio_key=i,
+				campaign=i.split('/')[1],
+			)
 			await a.save()
+			await a.move(f'app/audio/{a.id}/{a.name}')
 		print(f'{ret} records added to mongodb')
 		return ret
 
@@ -77,14 +82,19 @@ class Audio(BaseModel):
 		await get_db()['audio'].insert_one(self.dict())
 
 	async def update(self, **kwargs):
+		kwargs.update({'modified': datetime.now()})
 		await get_db()['audio'].update_one(
 			{'id': self.id},
 			{'$set': kwargs},
 		)
 
-	async def delete(self):
+	async def delete(self) -> None:
 		Minio().delete(self.minio_key)
 		await get_db()['audio'].delete_one({'id': self.id})
+
+	async def move(self, to: str) -> None:
+		mk = Minio().move(self.minio_key, to)
+		await self.update(minio_key=mk)
 
 	async def generate_fragments(self) -> List[Fragment]:
 		mc = Minio()
@@ -95,15 +105,7 @@ class Audio(BaseModel):
 		frag_files = [join(output_dir, f) for f in os.listdir(output_dir)]
 		frags = [await Fragment.create(self.id, i) for i in frag_files]
 
-		# moving the minio audio file to fragmented_source folder
-		await self.update(
-			status='fragmented',
-			modified=datetime.now(),
-			minio_key=mc.move(
-				self.minio_key,
-				f'fragmented_source/{self.id}.wav',
-			),
-		)
+		await self.update(status='fragmented')
 		return frags
 
 	async def get_fragments(self) -> List[Fragment]:

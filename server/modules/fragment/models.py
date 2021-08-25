@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List
 from uuid import uuid4
@@ -9,6 +10,8 @@ from server.utils.minio import Minio
 
 class Fragment(BaseModel):
 	id: str = Field(default_factory=lambda: str(uuid4()))
+	name: str
+	index: int
 	audio_id: str
 	minio_key: str = ''
 	created: datetime = Field(default_factory=datetime.now)
@@ -16,14 +19,14 @@ class Fragment(BaseModel):
 
 	@staticmethod
 	async def all() -> List:
-		ret = get_db()['fragments'].find()
+		ret = get_db()['fragments'].find().sort('index')
 		return [Fragment(**i) async for i in ret]
 
 	@staticmethod
 	async def filter(**kwargs) -> List:
 		if not kwargs:
 			return await Fragment.all()
-		ret = get_db()['fragments'].find(kwargs)
+		ret = get_db()['fragments'].find(kwargs).sort('index')
 		return [Fragment(**i) async for i in ret]
 
 	@staticmethod
@@ -33,10 +36,14 @@ class Fragment(BaseModel):
 		fragment audio file in the local machine
 		"""
 		print(f'Creating fragment from file: {filepath}')
+		name = os.path.basename(filepath)
+		index = int(name.strip().split('_')[-1].split('.')[0])
 		ret = Fragment(
-			audio_id=audio_id
+			name=name,
+			index=index,
+			audio_id=audio_id,
 		)
-		key = f'fragments/{audio_id}/{ret.id}.wav'
+		key = f'app/audio/{audio_id}/fragments/{name}'
 		Minio().upload_fileobj(open(filepath, 'rb'), key)
 		ret.minio_key = key
 		await ret.save()
