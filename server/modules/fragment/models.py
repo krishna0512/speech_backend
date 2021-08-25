@@ -8,6 +8,7 @@ from server.utils.minio import Minio
 
 class Fragment(BaseModel):
 	id: str = Field(default_factory=lambda: str(uuid4()))
+	audio_id: str
 	minio_key: str = ''
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
@@ -22,6 +23,22 @@ class Fragment(BaseModel):
 		if not kwargs:
 			return await Fragment.all()
 		return await get_db()['fragments'].filter(kwargs)
+
+	@staticmethod
+	async def create(audio_id, filepath):
+		"""
+		Creates a new fragment record given the audio and filepath of 
+		fragment audio file in the local machine
+		"""
+		print(f'Creating fragment from file: {filepath}')
+		ret = Fragment(
+			audio_id=audio_id
+		)
+		key = f'fragments/{audio_id}/{ret.id}.wav'
+		Minio().upload_fileobj(open(filepath, 'rb'), key)
+		ret.minio_key = key
+		await ret.save()
+		return ret
 
 	async def save(self):
 		await get_db()['fragments'].insert_one(self.dict())

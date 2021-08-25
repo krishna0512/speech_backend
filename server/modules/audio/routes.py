@@ -1,6 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter
+from server.modules.fragment.models import *
 from server.utils.minio import Minio
 
 from .models import *
@@ -48,7 +49,7 @@ async def update_db_from_minio():
 	return {'detail': f'{ret} new raw files updated'}
 
 
-@router.post('/{id}/fragment')
-async def fragment_raw_audio(id: str) -> str:
+@router.post('/{id}/fragments', response_model=List[Fragment])
+async def fragment_raw_audio(id: str) -> List[Fragment]:
 	audio = await Audio.get(id)
-	return audio
+	return await audio.generate_fragments()

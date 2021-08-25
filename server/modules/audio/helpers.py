@@ -2,8 +2,8 @@ import os
 from os.path import join
 
 import numpy as np
-import tqdm
 from scipy.io import wavfile
+from tqdm import tqdm
 
 
 def generate_fragments(folder):
@@ -34,6 +34,7 @@ def generate_fragments(folder):
 	step_duration = window_duration / 10
 	silence_threshold = 0.01
 	input_file = [i for i in os.listdir(folder) if i.endswith('.wav')][0]
+	input_file = join(folder, input_file)
 	print(f'Generating fragments for: {input_file}')
 	output_dir = join(folder, 'frags')
 	os.makedirs(output_dir)

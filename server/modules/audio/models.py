@@ -1,10 +1,16 @@
+import os
 from datetime import datetime
+from os.path import join
+from tempfile import TemporaryDirectory
 from typing import List
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
 from server.database import get_db
+from server.modules.fragment.models import Fragment
 from server.utils.minio import Minio
+
+from . import helpers
 
 
 class Audio(BaseModel):
@@ -70,5 +76,32 @@ class Audio(BaseModel):
 	async def save(self):
 		await get_db()['audio'].insert_one(self.dict())
 
+	async def update(self, **kwargs):
+		await get_db()['audio'].update_one(
+			{'id': self.id},
+			{'$set': kwargs},
+		)
+
 	async def delete(self):
+		Minio().delete(self.minio_key)
 		await get_db()['audio'].delete_one({'id': self.id})
+
+	async def generate_fragments(self) -> List[Fragment]:
+		mc = Minio()
+		t = TemporaryDirectory(prefix='frags')
+		input_file = join(t.name, self.minio_key.split('/')[-1])
+		mc.download(self.minio_key, input_file)
+		output_dir = helpers.generate_fragments(t.name)
+		frag_files = [join(output_dir, f) for f in os.listdir(output_dir)]
+		frags = [await Fragment.create(self.id, i) for i in frag_files]
+
+		# moving the minio audio file to fragmented_source folder
+		await self.update(
+			status='fragmented',
+			modified=datetime.now(),
+			minio_key=mc.move(
+				self.minio_key,
+				f'fragmented_source/{self.id}.wav',
+			),
+		)
+		return frags

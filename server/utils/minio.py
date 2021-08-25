@@ -2,6 +2,7 @@ import requests
 from server.config import *
 
 from minio import Minio as BaseMinio
+from minio.commonconfig import CopySource
 
 
 class Minio:
@@ -43,8 +44,24 @@ class Minio:
 	def delete(self, key: str) -> None:
 		self.client.remove_object(self.bucket_name, key)
 
+	def copy(self, source_key: str, dest_key: str) -> str:
+		self.client.copy_object(
+			self.bucket_name,
+			dest_key,
+			CopySource(
+				self.bucket_name,
+				source_key,
+			)
+		)
+		return dest_key
+
+	def move(self, source_key: str, dest_key: str) -> str:
+		self.copy(source_key, dest_key)
+		self.delete(source_key)
+		return dest_key
+
 	def list_objects(self, *args, **kwargs):
 		return self.client.list_objects(*args, **kwargs)
 
 	def download(self, key, path) -> None:
-		self.client.fput_object(self.bucket_name, key, path)
+		self.client.fget_object(self.bucket_name, key, path)
