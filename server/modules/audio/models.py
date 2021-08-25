@@ -112,3 +112,14 @@ class Audio(BaseModel):
 		if self.status == 'raw':
 			return []
 		return await Fragment.filter(audio_id=self.id)
+
+	async def delete_fragments(self):
+		if self.status == 'raw':
+			return 0
+		ret = await self.get_fragments()
+		for i in ret:
+			print(f'deleting fragment: {i.name}')
+			await i.delete()
+		Minio().delete(f'app/audio/{self.id}/fragments')
+		await self.update(status='raw')
+		return len(ret)

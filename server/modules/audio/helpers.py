@@ -66,7 +66,7 @@ def generate_fragments(folder):
 	for i, start, stop in tqdm(cut_ranges):
 		output_file_path = "{}_{:03d}.wav".format(
 			os.path.join(output_dir, output_filename_prefix),
-			i
+			i+1
 		)
 		print("Writing file ", output_file_path)
 		wavfile.write(
