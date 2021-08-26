@@ -1,8 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter
-from server.modules.fragment.models import *
-from server.utils.minio import Minio
+from server.modules.fragment.models import Fragment
 
 from .models import *
 

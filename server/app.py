@@ -5,6 +5,7 @@ from server.database import close_mongo_connection, connect_to_mongo
 from server.modules.audio.routes import router as audio_router
 from server.modules.auth.routes import router as auth_router
 from server.modules.fragment.routes import router as fragment_router
+from server.modules.job.routes import router as job_router
 from server.modules.user.routes import router as user_router
 
 app = FastAPI(
@@ -37,6 +38,12 @@ app.include_router(
 	fragment_router,
 	prefix='/fragments',
 	tags=['Fragmentation'],
+)
+
+app.include_router(
+	job_router,
+	prefix='/jobs',
+	tags=['Job'],
 )
 
 
