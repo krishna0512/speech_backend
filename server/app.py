@@ -2,6 +2,8 @@ from fastapi import FastAPI
 
 from server.config import *
 from server.database import close_mongo_connection, connect_to_mongo
+from server.modules.audio.fragment_routes import \
+    router as fragment_audio_router
 from server.modules.audio.routes import router as audio_router
 from server.modules.auth.routes import router as auth_router
 from server.modules.fragment.routes import router as fragment_router
@@ -35,9 +37,15 @@ app.include_router(
 )
 
 app.include_router(
+	fragment_audio_router,
+	prefix='/audio',
+	tags=['Audio-Fragment'],
+)
+
+app.include_router(
 	fragment_router,
 	prefix='/fragments',
-	tags=['Fragmentation'],
+	tags=['Fragment'],
 )
 
 app.include_router(
