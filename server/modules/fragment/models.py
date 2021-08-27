@@ -50,6 +50,7 @@ class Fragment(FragmentMixin, BaseModel):
 	index: int
 	audio_id: str
 	minio_key: str = ''
+	url: str = ''
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
 	text: str = ''
@@ -70,6 +71,7 @@ class Fragment(FragmentMixin, BaseModel):
 		key = f'app/audio/{audio_id}/fragments/{name}'
 		Minio().upload_fileobj(open(filepath, 'rb'), key)
 		ret.minio_key = key
+		ret.url = Minio().get_fileurl(key)
 		await ret.save()
 
 		# perform the asr on the newly created fragment
