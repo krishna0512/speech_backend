@@ -52,7 +52,7 @@ class Fragment(FragmentMixin, BaseModel):
 	minio_key: str = ''
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
-	asr: str = ''
+	text: str = ''
 
 	@staticmethod
 	async def create(audio_id, filepath):
@@ -71,10 +71,13 @@ class Fragment(FragmentMixin, BaseModel):
 		Minio().upload_fileobj(open(filepath, 'rb'), key)
 		ret.minio_key = key
 		await ret.save()
+
+		# perform the asr on the newly created fragment
+		await ret.perform_asr()
 		return ret
 
 	async def perform_asr(self) -> str:
 		url = Minio().get_fileurl(self.minio_key)
 		ret = ASR.telugu(url)
-		await self.update(asr=ret)
+		await self.update(text=ret)
 		return ret
