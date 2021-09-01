@@ -48,6 +48,13 @@ class User(UserOut):
 		return [User(**i) async for i in ret]
 
 	@staticmethod
+	async def filter(**kwargs) -> List:
+		if not kwargs:
+			return await User.all()
+		ret = get_db()['users'].find(kwargs)
+		return [User(**i) async for i in ret]
+
+	@staticmethod
 	async def create(user: UserIn):
 		userdict = user.dict().copy()
 		# TODO: check if the username already exists
@@ -79,6 +86,9 @@ class User(UserOut):
 			{'id': self.id},
 			{'$set': kwargs},
 		)
+
+	async def delete(self) -> None:
+		await get_db()['users'].delete_one({'id': self.id})
 
 	async def authenticate(self, password):
 		return CryptContext(

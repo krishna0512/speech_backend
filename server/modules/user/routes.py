@@ -31,3 +31,37 @@ async def register_new_user(
 	user: User = Depends(get_superuser)
 ):
 	return await User.create(data)
+
+
+@router.get('/{id}', response_model=UserOut)
+async def get_user_details(
+	id: str,
+	current_user: User = Depends(get_superuser),
+):
+	user = await User.filter(id=id)
+	return user[0]
+
+
+@router.patch("/{id}", response_model=UserOut)
+async def update_user_details(
+	id: str,
+	data: UserUpdate = Body(...),
+	current_user: User = Depends(get_superuser),
+):
+	user = await User.filter(id=id)
+	user = user[0]
+	data = data.dict()
+	# ignore the empty data keys
+	data = {i:data[i] for i in data if data[i]}
+	await user.update(**data)
+	return await User.get(user.username)
+
+
+@router.delete('/{id}')
+async def delete_user(
+	id: str,
+	current_user: User = Depends(get_superuser),
+):
+	user = await User.filter(id=id)
+	await user[0].delete()
+	return {'detail': '1 User deleted'}
