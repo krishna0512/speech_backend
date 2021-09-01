@@ -79,5 +79,29 @@ class Campaign(BaseModel, CampaignMixin):
 		await camp.save()
 		return camp
 
+	async def add_speaker(self, user_id: str):
+		"""
+		Adds the given user to the speakers list of this camapaign
+		"""
+		ret = self.speakers
+		ret.append(user_id)
+		await self.update(speakers=ret)
+
+	async def add_transcriber(self, user_id: str):
+		"""
+		Adds the given user to the transcribers list of this camapaign
+		"""
+		ret = self.transcribers
+		ret.append(user_id)
+		await self.update(transcribers=ret)
+
+	async def add_reviewer(self, user_id: str):
+		"""
+		Adds the given user to the reviewers list of this camapaign
+		"""
+		ret = self.reviewers
+		ret.append(user_id)
+		await self.update(reviewers=ret)
+
 class CampaignOut(Campaign):
 	pass

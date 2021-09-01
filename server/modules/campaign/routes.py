@@ -50,3 +50,21 @@ async def delete_single_campaign(
 ):
 	await camp.delete()
 	return {'detail': '1 record deleted'}
+
+
+@router.post('/{id}/transcribers', response_model=CampaignOut)
+async def add_transcriber_to_campaign(
+	user_id: str,
+	camp: Campaign = Depends(get_campaign_by_id)
+):
+	await camp.add_transcriber(user_id)
+	return await camp.refresh()
+
+
+@router.post('/{id}/reviewers', response_model=CampaignOut)
+async def add_reviewer_to_campaign(
+	user_id: str,
+	camp: Campaign = Depends(get_campaign_by_id)
+):
+	await camp.add_reviewer(user_id)
+	return await camp.refresh()
