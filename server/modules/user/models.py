@@ -73,7 +73,7 @@ class User(UserOut):
 		user = await User.get(username)
 		if not user:
 			return False
-		if not user.authenticate(password):
+		if not await user.authenticate(password):
 			return False
 		return user
 
