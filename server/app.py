@@ -6,6 +6,7 @@ from server.modules.audio.fragment_routes import \
     router as fragment_audio_router
 from server.modules.audio.routes import router as audio_router
 from server.modules.auth.routes import router as auth_router
+from server.modules.campaign.routes import router as campaign_router
 from server.modules.fragment.routes import router as fragment_router
 from server.modules.job.routes import router as job_router
 from server.modules.user.routes import router as user_router
@@ -24,11 +25,13 @@ app.include_router(
 	tags=['Auth'],
 )
 
-app.include_router(
-	user_router,
-	prefix='/users',
-	tags=['User'],
-)
+# app.include_router(
+# 	user_router,
+# 	prefix='/users',
+# 	tags=['User'],
+# )
+
+app.include_router(campaign_router)
 
 # app.include_router(
 # 	audio_router,

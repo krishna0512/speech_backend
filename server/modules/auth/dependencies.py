@@ -42,3 +42,11 @@ async def get_superuser(user: User = Depends(get_user)):
 			detail="Endpoint only accessible to superuser"
 		)
 	return user
+
+async def get_campaign_admin(user: User = Depends(get_active_user)):
+	# if not 'campaign_admin' in user.roles and not user.superuser:
+	# 	raise HTTPException(
+	# 		status_code=400,
+	# 		detail='Endpoint only accessible to campaign admin or Superuser'
+	# 	)
+	return user
