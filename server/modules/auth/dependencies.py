@@ -29,10 +29,16 @@ async def get_user(token: str = Depends(oauth2_scheme)):
 
 async def get_active_user(user: User = Depends(get_user)):
 	if not user.active:
-		raise HTTPException(status_code=400, detail="Inactive user")
+		raise HTTPException(
+			status_code=400,
+			detail="User Inactive. Please contact admin"
+		)
 	return user
 
 async def get_superuser(user: User = Depends(get_user)):
 	if not user.superuser:
-		raise HTTPException(status_code=400, detail="Endpoint only accessible to superuser")
+		raise HTTPException(
+			status_code=400,
+			detail="Endpoint only accessible to superuser"
+		)
 	return user

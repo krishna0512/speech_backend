@@ -20,6 +20,11 @@ class UserOut(BaseModel):
 	active: Optional[bool] = True
 	superuser: Optional[bool] = False
 
+class UserUpdate(BaseModel):
+	name: Optional[str] = ''
+	mobile: Optional[str] = ''
+	email: Optional[str] = ''
+
 class UserIn(BaseModel):
 	username: str
 	password: str
@@ -67,6 +72,13 @@ class User(UserOut):
 
 	async def save(self):
 		await get_db()['users'].insert_one(self.dict())
+
+	async def update(self, **kwargs):
+		# kwargs.update({'modified': datetime.now()})
+		await get_db()['users'].update_one(
+			{'id': self.id},
+			{'$set': kwargs},
+		)
 
 	async def authenticate(self, password):
 		return CryptContext(

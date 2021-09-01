@@ -30,29 +30,29 @@ app.include_router(
 	tags=['User'],
 )
 
-app.include_router(
-	audio_router,
-	prefix='/audio',
-	tags=['Audio'],
-)
+# app.include_router(
+# 	audio_router,
+# 	prefix='/audio',
+# 	tags=['Audio'],
+# )
 
-app.include_router(
-	fragment_audio_router,
-	prefix='/audio',
-	tags=['Audio-Fragment'],
-)
+# app.include_router(
+# 	fragment_audio_router,
+# 	prefix='/audio',
+# 	tags=['Audio-Fragment'],
+# )
 
-app.include_router(
-	fragment_router,
-	prefix='/fragments',
-	tags=['Fragment'],
-)
+# app.include_router(
+# 	fragment_router,
+# 	prefix='/fragments',
+# 	tags=['Fragment'],
+# )
 
-app.include_router(
-	job_router,
-	prefix='/jobs',
-	tags=['Job'],
-)
+# app.include_router(
+# 	job_router,
+# 	prefix='/jobs',
+# 	tags=['Job'],
+# )
 
 
 @app.post('/', tags=['Main'])
