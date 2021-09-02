@@ -2,10 +2,8 @@ from fastapi import FastAPI
 
 from server.config import *
 from server.database import close_mongo_connection, connect_to_mongo
-from server.modules.audio.fragment_routes import \
-    router as fragment_audio_router
-from server.modules.audio.routes import router as audio_router
 from server.modules.auth.routes import router as auth_router
+from server.modules.block.routes import router as block_router
 from server.modules.campaign.routes import router as campaign_router
 from server.modules.fragment.routes import router as fragment_router
 from server.modules.job.routes import router as job_router
@@ -32,6 +30,7 @@ app.include_router(
 # )
 
 app.include_router(campaign_router)
+app.include_router(block_router)
 
 # app.include_router(
 # 	audio_router,

@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from os.path import join
 from tempfile import TemporaryDirectory
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -12,34 +12,35 @@ from server.modules.fragment.models import Fragment
 from server.utils.minio import Minio
 from tqdm import trange
 
+from ..campaign.models import *
 from . import helpers
 
 
-class AudioMixin:
+class BlockMixin:
 
 	@staticmethod
 	async def all() -> List:
-		ret = get_db()['audio'].find()
-		return [Audio(**i) async for i in ret]
+		ret = get_db()['blocks'].find()
+		return [Block(**i) async for i in ret]
 
 	@staticmethod
 	async def filter(**kwargs) -> List:
 		if not kwargs:
-			return await Audio.all()
-		ret = get_db()['audio'].find(kwargs)
-		return [Audio(**i) async for i in ret]
+			return await Block.all()
+		ret = get_db()['blocks'].find(kwargs)
+		return [Block(**i) async for i in ret]
 
 	@staticmethod
 	async def get(id):
-		ret = await get_db()['audio'].find_one({'id': id})
-		return Audio(**ret)
+		ret = await get_db()['blocks'].find_one({'id': id})
+		return Block(**ret)
 
 	async def save(self):
-		await get_db()['audio'].insert_one(self.dict())
+		await get_db()['blocks'].insert_one(self.dict())
 
 	async def update(self, **kwargs):
 		kwargs.update({'modified': datetime.now()})
-		await get_db()['audio'].update_one(
+		await get_db()['blocks'].update_one(
 			{'id': self.id},
 			{'$set': kwargs},
 		)
@@ -48,32 +49,42 @@ class AudioMixin:
 		if self.status == 'fragmented':
 			await self.delete_fragments()
 		Minio().delete(self.minio_key)
-		Minio().delete(f'app/audio/{self.id}')
-		await get_db()['audio'].delete_one({'id': self.id})
+		Minio().delete('/'.join(self.minio_key.split('/')[:-1]))
+		await get_db()['blocks'].delete_one({'id': self.id})
 
 	async def move(self, to: str) -> None:
 		mk = Minio().move(self.minio_key, to)
 		await self.update(minio_key=mk)
 
 
-class Audio(BaseModel, AudioMixin):
+class BlockIn(BaseModel):
+	# stores the name of the original audio file as referenced from
+	# minio campaign_source folder
+	name: str
+	# stores the campaign that this audio belongs to
+	# campaign can be ["ozonetel_webapp", "ozonetel_whatsapp"]
+	campaign_id: str
+
+
+
+class Block(BaseModel, BlockMixin):
 	id: str = Field(default_factory=lambda: str(uuid4()))
 	# stores the name of the original audio file as referenced from
 	# minio campaign_source folder
 	name: str
-	minio_key: str = ''
-	created: datetime = Field(default_factory=datetime.now)
-	modified: datetime = Field(default_factory=datetime.now)
+	minio_key: Optional[str] = ''
 	# status can be ["raw", "fragmented"]
 	status: str = 'raw'
 	# stores the campaign that this audio belongs to
 	# campaign can be ["ozonetel_webapp", "ozonetel_whatsapp"]
-	campaign: str = ''
+	campaign_id: str
+	created: datetime = Field(default_factory=datetime.now)
+	modified: datetime = Field(default_factory=datetime.now)
 
 	@staticmethod
-	async def refresh() -> int:
+	async def update_block_from_minio(camp_id: str) -> int:
 		"""
-		This method handles all the logic to update the Audiofiles from
+		This method handles all the logic to update the files from
 		minio that are not already present in the mongodb
 
 		@returns: int, the number of new files added to the mongodb
@@ -91,13 +102,19 @@ class Audio(BaseModel, AudioMixin):
 		if ret == 0:
 			return ret
 		for i in files:
-			a = Audio(
+			a = Block(
 				name=i.split('/')[-1],
 				minio_key=i,
-				campaign=i.split('/')[1],
+				campaign_id=camp_id,
 			)
 			await a.save()
-			await a.move(f'app/audio/{a.id}/{a.name}')
+			# TODO: instead of calling the name of the campaign and then
+			# creating the minio_key, we can directly store the minio_key in
+			# the campaign model that will point to the campaign folder
+			camp = await Campaign.get(camp_id)
+			await a.move(
+				f'App/Campaigns/{camp.name}/Blocks/{a.id}/{a.name}'
+			)
 		print(f'{ret} records added to mongodb')
 		return ret
 
@@ -133,3 +150,7 @@ class Audio(BaseModel, AudioMixin):
 		Minio().delete(f'app/audio/{self.id}/fragments')
 		await self.update(status='raw')
 		return len(ret)
+
+
+class BlockOut(Block):
+	pass
