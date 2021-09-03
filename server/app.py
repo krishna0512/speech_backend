@@ -31,6 +31,7 @@ app.include_router(
 
 app.include_router(campaign_router)
 app.include_router(block_router)
+app.include_router(fragment_router)
 
 # app.include_router(
 # 	audio_router,

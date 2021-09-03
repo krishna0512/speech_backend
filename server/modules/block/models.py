@@ -8,11 +8,11 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 from server.config import *
 from server.database import get_db
-from server.modules.fragment.models import Fragment
 from server.utils.minio import Minio
 from tqdm import trange
 
-from ..campaign.models import *
+from ..campaign.models import Campaign
+from ..fragment.models import Fragment
 from . import helpers
 
 
@@ -129,8 +129,9 @@ class Block(BaseModel, BlockMixin):
 		frag_files = sorted(frag_files, key=lambda x: int(x.split('_')[-1].split('.')[0]))
 		frags = []
 		for i in trange(len(frag_files), desc='Creating Fragments '):
+			cname = await self.get_campaign_name()
 			frags.append(
-				await Fragment.create(self.id, frag_files[i])
+				await Fragment.create(self.id, cname, frag_files[i])
 			)
 
 		await self.update(status='fragmented')
@@ -139,7 +140,7 @@ class Block(BaseModel, BlockMixin):
 	async def get_fragments(self) -> List[Fragment]:
 		if self.status == 'raw':
 			return []
-		return await Fragment.filter(audio_id=self.id)
+		return await Fragment.filter(block_id=self.id)
 
 	async def delete_fragments(self):
 		if self.status == 'raw':
@@ -150,6 +151,10 @@ class Block(BaseModel, BlockMixin):
 		Minio().delete(f'app/audio/{self.id}/fragments')
 		await self.update(status='raw')
 		return len(ret)
+
+	async def get_campaign_name(self) -> str:
+		ret = await Campaign.get(self.campaign_id)
+		return ret.name
 
 
 class BlockOut(Block):

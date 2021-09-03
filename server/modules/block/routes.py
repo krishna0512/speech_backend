@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from server.modules.auth.dependencies import *
 
 from ..campaign.models import *
+from ..fragment.models import Fragment
 from .models import *
 
 router = APIRouter(
@@ -61,3 +62,10 @@ async def update_blocks_for_campaign(
 	"""
 	ret = await Block.update_block_from_minio(campaign_id)
 	return {'detail': f'{ret} new raw files updated'}
+
+
+@router.post('/{id}/fragments', response_model=List[Fragment])
+async def get_single_block(
+	block: Block = Depends(get_block_by_id)
+):
+	return await block.generate_fragments()

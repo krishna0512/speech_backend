@@ -1,25 +1,29 @@
-from fastapi import APIRouter
+from typing import List
 
+from fastapi import APIRouter, Depends
+from server.modules.auth.dependencies import *
+
+from ..block.models import Block
 from .models import *
 
-router = APIRouter()
+router = APIRouter(
+	prefix='/fragments',
+	tags=['Fragment'],
+	# default campaign admin dependency
+	dependencies=[Depends(get_campaign_admin)]
+)
 
-@router.post('')
-async def fragment_raw_files():
-	"""
-	This Endpoint handles the processing of all remaining raw audio files into
-	multiple fragments
-	"""
-	pass
+async def get_fragment_by_id(id: str) -> Fragment:
+	return await Fragment.get(id)
+
+
+@router.get('', response_model=List[Fragment])
+async def get_all_fragments():
+	return await Fragment.all()
 
 
 @router.get('/{id}', response_model=Fragment)
-async def get_fragment(id: str) -> Fragment:
-	return await Fragment.get(id)
-
-
-@router.post('/{id}/asr', response_model=Fragment)
-async def perform_asr_on_fragment(id: str) -> Fragment:
-	frag = await Fragment.get(id)
-	await frag.perform_asr()
-	return await Fragment.get(id)
+async def get_single_fragment(
+	fragment: Fragment = Depends(get_fragment_by_id)
+):
+	return fragment

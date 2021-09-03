@@ -48,15 +48,16 @@ class Fragment(FragmentMixin, BaseModel):
 	id: str = Field(default_factory=lambda: str(uuid4()))
 	name: str
 	index: int
-	audio_id: str
+	block_id: str
+	status: str = 'new'
 	minio_key: str = ''
 	url: str = ''
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
-	text: str = ''
+	transcript: str = ''
 
 	@staticmethod
-	async def create(audio_id, filepath):
+	async def create(block_id, camp_name, filepath):
 		"""
 		Creates a new fragment record given the audio and filepath of 
 		fragment audio file in the local machine
@@ -66,9 +67,9 @@ class Fragment(FragmentMixin, BaseModel):
 		ret = Fragment(
 			name=name,
 			index=index,
-			audio_id=audio_id,
+			block_id=block_id,
 		)
-		key = f'app/audio/{audio_id}/fragments/{name}'
+		key = f'App/Campaigns/{camp_name}/Blocks/{block_id}/Fragments/{name}'
 		Minio().upload_fileobj(open(filepath, 'rb'), key)
 		ret.minio_key = key
 		ret.url = Minio().get_fileurl(key)
@@ -81,5 +82,9 @@ class Fragment(FragmentMixin, BaseModel):
 	async def perform_asr(self) -> str:
 		url = Minio().get_fileurl(self.minio_key)
 		ret = ASR.telugu(url)
-		await self.update(text=ret)
+		await self.update(transcript=ret)
 		return ret
+
+
+class FragmentOut(Fragment):
+	pass
