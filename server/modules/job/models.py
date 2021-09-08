@@ -44,10 +44,34 @@ class JobMixin:
 class JobIn(BaseModel):
 	pass
 
-class Job(BaseModel):
+class Job(BaseModel, JobMixin):
 	id: str = Field(default_factory=lambda: str(uuid4()))
+	assigned_to: str = ''
+	reviewed_by: str = ''
 	fragment_id: str
+	# pending, assigned, completed, reviewed
+	status: str = 'pending'
+	correct: bool = False
+	transcript: str = ''
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
-	# status can be ['new', 'correct', 'incorrect']
-	status: Optional[str] = 'new'
+
+	# def validate_assigned_to():
+	# 	pass
+
+	@staticmethod
+	async def create(fid: str):
+		a = Job(fragment_id=fid)
+		await a.save()
+
+	async def assign(self, to: str):
+		await self.update(status='assigned', assigned_to=to)
+		return await Job.get(self.id)
+
+class JobUpdate(BaseModel):
+	correct: Optional[bool] = False
+	transcript: Optional[str] = ''
+
+
+class JobOut(Job):
+	pass

@@ -27,3 +27,10 @@ async def get_single_fragment(
 	fragment: Fragment = Depends(get_fragment_by_id)
 ):
 	return fragment
+
+
+@router.post('/{id}/jobs')
+async def create_jobs_for_fragment(
+	fragment: Fragment = Depends(get_fragment_by_id)
+):
+	return {'detail': f'{await fragment.create_jobs()} jobs created'}

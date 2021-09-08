@@ -7,6 +7,9 @@ from pydantic import BaseModel, Field
 from server.database import get_db
 from server.utils import asr as ASR
 from server.utils.minio import Minio
+from tqdm import trange
+
+from ..job.models import Job
 
 
 class FragmentMixin:
@@ -84,6 +87,17 @@ class Fragment(FragmentMixin, BaseModel):
 		ret = ASR.telugu(url)
 		await self.update(transcript=ret)
 		return ret
+
+	async def _get_number_of_jobs(self):
+		a = await get_db()['blocks'].find_one({'id': self.block_id})
+		a = await get_db()['campaigns'].find_one({'id': a['campaign_id']})
+		return a['jobs_per_fragment']
+
+	async def create_jobs(self) -> int:
+		njobs = await self._get_number_of_jobs()
+		for _ in trange(njobs):
+			await Job.create(self.id)
+		return njobs
 
 
 class FragmentOut(Fragment):
