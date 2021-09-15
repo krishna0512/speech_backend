@@ -46,6 +46,14 @@ class CampaignMixin:
 
 class CampaignIn(BaseModel):
 	name: str
+	code: str
+	language: Optional[str] = 'Telugu'
+	description: Optional[str] = ''
+	# can be [free, paid]
+	category: Optional[str] = 'free'
+	topics: Optional[List[str]] = []
+	demourl: Optional[str] = ''
+	max_users: Optional[int] = 1
 	rate_speaker: Optional[float] = 0.0
 	rate_transcriber: Optional[float] = 0.0
 	rate_reviewer: Optional[float] = 0.0
@@ -53,14 +61,31 @@ class CampaignIn(BaseModel):
 
 class CampaignUpdate(BaseModel):
 	name: Optional[str] = None
+	code: Optional[str] = None
+	language: Optional[str] = None
+	description: Optional[str] = None
+	# can be [free, paid]
+	category: Optional[str] = None
+	topics: Optional[List[str]] = None
+	demourl: Optional[str] = None
+	max_users: Optional[int] = None
 	rate_speaker: Optional[float] = None
 	rate_transcriber: Optional[float] = None
 	rate_reviewer: Optional[float] = None
 	jobs_per_fragment: Optional[int] = None
+	status: Optional[str] = None
 
 class Campaign(BaseModel, CampaignMixin):
 	id: Optional[str] = Field(default_factory=lambda: str(uuid4()))
 	name: str
+	code: str
+	language: Optional[str] = 'Telugu'
+	description: Optional[str] = ''
+	# can be [free, paid]
+	category: Optional[str] = 'free'
+	topics: Optional[List[str]] = []
+	demourl: Optional[str] = ''
+	max_users: Optional[int] = 1
 	speakers: Optional[List[str]] = []
 	transcribers: Optional[List[str]] = []
 	reviewers: Optional[List[str]] = []
@@ -70,6 +95,7 @@ class Campaign(BaseModel, CampaignMixin):
 	jobs_per_fragment: Optional[int] = 3
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
+	status: Optional[str] = 'active'
 
 	@staticmethod
 	async def create(data: CampaignIn):
