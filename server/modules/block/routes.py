@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from server.modules.auth.dependencies import *
 
 from ..campaign.models import *
@@ -54,13 +54,14 @@ async def get_single_block(
 
 @router.post('/update')
 async def update_blocks_for_campaign(
-	campaign_id: str
+	campaign_id: str,
+	bt: BackgroundTasks
 ):
 	"""
 	This endpoint will handle all the logic for checking in the Minio server
 	and updating any new files to the mongodb.
 	"""
-	ret = await Block.update_block_from_minio(campaign_id)
+	ret = await Block.update_block_from_minio(campaign_id, bt)
 	return {'detail': f'{ret} new raw files updated'}
 
 

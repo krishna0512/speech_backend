@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from server.config import *
 from server.database import close_mongo_connection, connect_to_mongo
@@ -12,6 +13,22 @@ from server.modules.user.routes import router as user_router
 app = FastAPI(
 	title='Speech Data API',
 	description='Comprehensive API for all the speech data related backend tasks',
+)
+
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+]
+origins = ['*']
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.add_event_handler('startup', connect_to_mongo)

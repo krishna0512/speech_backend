@@ -29,6 +29,29 @@ async def get_single_fragment(
 	return fragment
 
 
+@router.get('/{id}/review', response_model=Fragment)
+async def review_single_fragment(
+	correct: bool,
+	fragment: Fragment = Depends(get_fragment_by_id)
+):
+	await fragment.update(review=correct, status='reviewed')
+	return await Fragment.get(fragment.id)
+
+
+@router.post('/{id}/reject', response_model=Fragment)
+async def reject_fragment(
+	fragment: Fragment = Depends(get_fragment_by_id)
+):
+	return await fragment.reject()
+
+
+@router.post('/{id}/approve', response_model=Fragment)
+async def reject_fragment(
+	fragment: Fragment = Depends(get_fragment_by_id)
+):
+	return await fragment.approve()
+
+
 @router.post('/{id}/jobs')
 async def create_jobs_for_fragment(
 	fragment: Fragment = Depends(get_fragment_by_id)

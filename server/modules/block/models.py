@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from os.path import join
+from fastapi import BackgroundTasks
 from tempfile import TemporaryDirectory
 from typing import List, Optional
 from uuid import uuid4
@@ -14,6 +15,11 @@ from tqdm import trange
 from ..campaign.models import Campaign
 from ..fragment.models import Fragment
 from . import helpers
+
+async def generate_fragments_background(id):
+	a = await Block.get(id)
+	await a.update(status='fragmenting')
+	await a.generate_fragments()
 
 
 class BlockMixin:
@@ -54,7 +60,7 @@ class BlockMixin:
 
 	async def move(self, to: str) -> None:
 		mk = Minio().move(self.minio_key, to)
-		await self.update(minio_key=mk)
+		await self.update(minio_key=mk, url=Minio().get_fileurl(mk))
 
 
 class BlockIn(BaseModel):
@@ -73,6 +79,7 @@ class Block(BaseModel, BlockMixin):
 	# minio campaign_source folder
 	name: str
 	minio_key: Optional[str] = ''
+	url: Optional[str] = ''
 	# status can be ["raw", "fragmented"]
 	status: str = 'raw'
 	# stores the campaign that this audio belongs to
@@ -82,7 +89,7 @@ class Block(BaseModel, BlockMixin):
 	modified: datetime = Field(default_factory=datetime.now)
 
 	@staticmethod
-	async def update_block_from_minio(camp_id: str) -> int:
+	async def update_block_from_minio(camp_id: str, bt: BackgroundTasks) -> int:
 		"""
 		This method handles all the logic to update the files from
 		minio that are not already present in the mongodb
@@ -105,6 +112,7 @@ class Block(BaseModel, BlockMixin):
 			a = Block(
 				name=i.split('/')[-1],
 				minio_key=i,
+				url=Minio().get_fileurl(i),
 				campaign_id=camp_id,
 			)
 			await a.save()
@@ -115,6 +123,7 @@ class Block(BaseModel, BlockMixin):
 			await a.move(
 				f'App/Campaigns/{camp.name}/Blocks/{a.id}/{a.name}'
 			)
+			bt.add_task(generate_fragments_background, a.id)
 		print(f'{ret} records added to mongodb')
 		return ret
 

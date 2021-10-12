@@ -41,8 +41,12 @@ class FragmentMixin:
 			{'$set': kwargs},
 		)
 
+	async def refresh(self):
+		return await Fragment.get(self.id)
+
 	async def delete(self):
 		Minio().delete(self.minio_key)
+		await get_db()['jobs'].delete_many({'fragment_id': self.id})
 		await get_db()['fragments'].delete_one({'id': self.id})
 
 
@@ -55,6 +59,7 @@ class Fragment(FragmentMixin, BaseModel):
 	status: str = 'new'
 	minio_key: str = ''
 	url: str = ''
+	review: bool = None
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
 	transcript: str = ''
@@ -80,12 +85,13 @@ class Fragment(FragmentMixin, BaseModel):
 
 		# perform the asr on the newly created fragment
 		await ret.perform_asr()
+		await ret.create_jobs()
 		return ret
 
 	async def perform_asr(self) -> str:
 		url = Minio().get_fileurl(self.minio_key)
 		ret = ASR.telugu(url)
-		await self.update(transcript=ret)
+		await self.update(transcript=ret, status='asr_done')
 		return ret
 
 	async def _get_number_of_jobs(self):
@@ -96,8 +102,17 @@ class Fragment(FragmentMixin, BaseModel):
 	async def create_jobs(self) -> int:
 		njobs = await self._get_number_of_jobs()
 		for _ in trange(njobs):
-			await Job.create(self.id)
+			a = await Job.create(self.id)
+			await a.assign("admin")
 		return njobs
+
+	async def reject(self):
+		await self.update(status='rejected')
+		return await self.refresh()
+
+	async def approve(self):
+		await self.update(status='approved')
+		return await self.refresh()
 
 
 class FragmentOut(Fragment):
