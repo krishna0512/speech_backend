@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends
 from server.modules.auth.dependencies import *
 
 from ..campaign.models import *
@@ -70,3 +70,11 @@ async def get_single_block(
 	block: Block = Depends(get_block_by_id)
 ):
 	return await block.generate_fragments()
+
+
+@router.delete('/{id}/fragments')
+async def delete_block_fragments(
+	block: Block = Depends(get_block_by_id)
+):
+	ret = await block.delete_fragments()
+	return {'detail': f'{ret} fragments deleted'}
