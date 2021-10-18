@@ -1,20 +1,22 @@
 import os
 from datetime import datetime
 from os.path import join
-from fastapi import BackgroundTasks
 from tempfile import TemporaryDirectory
 from typing import List, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from fastapi import BackgroundTasks
+from pydantic import BaseModel, Field, ValidationError, validator
 from server.config import *
 from server.database import get_db
 from server.utils.minio import Minio
 from tqdm import trange
 
 from ..campaign.models import Campaign
+from ..core.mixins import DBModelMixin
 from ..fragment.models import Fragment
 from . import helpers
+
 
 async def generate_fragments_background(id):
 	a = await Block.get(id)
@@ -22,34 +24,43 @@ async def generate_fragments_background(id):
 	await a.generate_fragments()
 
 
-class BlockMixin:
+class BlockIn(BaseModel):
+	# stores the name of the original audio file as referenced from
+	# minio campaign_source folder
+	name: str
+	# stores the campaign that this audio belongs to
+	campaign_id: str
 
-	@staticmethod
-	async def all() -> List:
-		ret = get_db()['blocks'].find()
-		return [Block(**i) async for i in ret]
 
-	@staticmethod
-	async def filter(**kwargs) -> List:
-		if not kwargs:
-			return await Block.all()
-		ret = get_db()['blocks'].find(kwargs)
-		return [Block(**i) async for i in ret]
+class Block(BaseModel, DBModelMixin):
+	id: str = Field(default_factory=lambda: str(uuid4()))
+	# stores the name of the original audio file as referenced from
+	# minio campaign_source folder
+	name: str
+	# stores the ID of the campaign that this audio belongs to
+	campaign_id: str
+	minio_key: Optional[str] = ''
+	url: Optional[str] = ''
+	# status can be ["raw", "fragmented"]
+	status: str = 'raw'
+	created: datetime = Field(default_factory=datetime.now)
+	modified: datetime = Field(default_factory=datetime.now)
 
-	@staticmethod
-	async def get(id):
-		ret = await get_db()['blocks'].find_one({'id': id})
-		return Block(**ret)
+	class Meta:
+		collection_name = 'blocks'
 
-	async def save(self):
-		await get_db()['blocks'].insert_one(self.dict())
+	@validator('status')
+	def validate_status_choice(cls, v):
+		"""
+		validate the status field to only have the values of
+		"raw" or "fragmented"
+		"""
+		assert v in ['raw', 'fragmented'], f'{v} is not a valid status'
+		return v
 
-	async def update(self, **kwargs):
-		kwargs.update({'modified': datetime.now()})
-		await get_db()['blocks'].update_one(
-			{'id': self.id},
-			{'$set': kwargs},
-		)
+	async def move(self, to: str) -> None:
+		mk = Minio().move(self.minio_key, to)
+		await self.update(minio_key=mk, url=Minio().get_fileurl(mk))
 
 	async def delete(self) -> None:
 		if self.status == 'fragmented':
@@ -57,36 +68,6 @@ class BlockMixin:
 		Minio().delete(self.minio_key)
 		Minio().delete('/'.join(self.minio_key.split('/')[:-1]))
 		await get_db()['blocks'].delete_one({'id': self.id})
-
-	async def move(self, to: str) -> None:
-		mk = Minio().move(self.minio_key, to)
-		await self.update(minio_key=mk, url=Minio().get_fileurl(mk))
-
-
-class BlockIn(BaseModel):
-	# stores the name of the original audio file as referenced from
-	# minio campaign_source folder
-	name: str
-	# stores the campaign that this audio belongs to
-	# campaign can be ["ozonetel_webapp", "ozonetel_whatsapp"]
-	campaign_id: str
-
-
-
-class Block(BaseModel, BlockMixin):
-	id: str = Field(default_factory=lambda: str(uuid4()))
-	# stores the name of the original audio file as referenced from
-	# minio campaign_source folder
-	name: str
-	minio_key: Optional[str] = ''
-	url: Optional[str] = ''
-	# status can be ["raw", "fragmented"]
-	status: str = 'raw'
-	# stores the campaign that this audio belongs to
-	# campaign can be ["ozonetel_webapp", "ozonetel_whatsapp"]
-	campaign_id: str
-	created: datetime = Field(default_factory=datetime.now)
-	modified: datetime = Field(default_factory=datetime.now)
 
 	@staticmethod
 	async def update_block_from_minio(camp_id: str, bt: BackgroundTasks) -> int:
@@ -142,22 +123,16 @@ class Block(BaseModel, BlockMixin):
 			frags.append(
 				await Fragment.create(self.id, cname, frag_files[i])
 			)
-
 		await self.update(status='fragmented')
 		return frags
 
-	async def get_fragments(self) -> List[Fragment]:
-		if self.status == 'raw':
-			return []
-		return await Fragment.filter(block_id=self.id)
-
-	async def delete_fragments(self):
+	async def delete_fragments(self) -> int:
 		if self.status == 'raw':
 			return 0
-		ret = await self.get_fragments()
+		# get all the fragments for this block
+		ret = await Fragment.filter(block_id=self.id)
 		for i in trange(len(ret), desc='Deleting Fragments '):
 			await ret[i].delete()
-		Minio().delete(f'app/audio/{self.id}/fragments')
 		await self.update(status='raw')
 		return len(ret)
 
