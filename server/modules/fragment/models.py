@@ -9,10 +9,30 @@ from server.utils import asr as ASR
 from server.utils.minio import Minio
 from tqdm import trange
 
+from ..core.mixins import DBModelMixin
 from ..job.models import Job
 
 
-class FragmentMixin:
+class Fragment(BaseModel, DBModelMixin):
+	id: str = Field(default_factory=lambda: str(uuid4()))
+	name: str
+	index: int
+	block_id: str
+	status: str = 'new'
+	minio_key: str = ''
+	url: str = ''
+	review: bool = None
+	created: datetime = Field(default_factory=datetime.now)
+	modified: datetime = Field(default_factory=datetime.now)
+	transcript: str = ''
+
+	class Meta:
+		collection_name = 'fragments'
+
+	async def delete(self):
+		Minio().delete(self.minio_key)
+		await get_db()['jobs'].delete_many({'fragment_id': self.id})
+		await get_db()['fragments'].delete_one({'id': self.id})
 
 	@staticmethod
 	async def all() -> List:
@@ -25,44 +45,6 @@ class FragmentMixin:
 			return await Fragment.all()
 		ret = get_db()['fragments'].find(kwargs).sort('index')
 		return [Fragment(**i) async for i in ret]
-
-	@staticmethod
-	async def get(id):
-		ret = await get_db()['fragments'].find_one({'id': id})
-		return Fragment(**ret)
-
-	async def save(self):
-		await get_db()['fragments'].insert_one(self.dict())
-
-	async def update(self, **kwargs):
-		kwargs.update({'modified': datetime.now()})
-		await get_db()['fragments'].update_one(
-			{'id': self.id},
-			{'$set': kwargs},
-		)
-
-	async def refresh(self):
-		return await Fragment.get(self.id)
-
-	async def delete(self):
-		Minio().delete(self.minio_key)
-		await get_db()['jobs'].delete_many({'fragment_id': self.id})
-		await get_db()['fragments'].delete_one({'id': self.id})
-
-
-
-class Fragment(FragmentMixin, BaseModel):
-	id: str = Field(default_factory=lambda: str(uuid4()))
-	name: str
-	index: int
-	block_id: str
-	status: str = 'new'
-	minio_key: str = ''
-	url: str = ''
-	review: bool = None
-	created: datetime = Field(default_factory=datetime.now)
-	modified: datetime = Field(default_factory=datetime.now)
-	transcript: str = ''
 
 	@staticmethod
 	async def create(block_id, camp_name, filepath):
@@ -94,16 +76,15 @@ class Fragment(FragmentMixin, BaseModel):
 		await self.update(transcript=ret, status='asr_done')
 		return ret
 
-	async def _get_number_of_jobs(self):
+	async def create_jobs(self) -> int:
 		a = await get_db()['blocks'].find_one({'id': self.block_id})
 		a = await get_db()['campaigns'].find_one({'id': a['campaign_id']})
-		return a['jobs_per_fragment']
-
-	async def create_jobs(self) -> int:
-		njobs = await self._get_number_of_jobs()
+		njobs = a['jobs_per_fragment']
 		for _ in trange(njobs):
+			# create the new jobs as it is.
+			# dont assign the new jobs to anyone i.e. jobs status is pending
 			a = await Job.create(self.id)
-			await a.assign("admin")
+			# await a.assign("admin")
 		return njobs
 
 	async def reject(self):

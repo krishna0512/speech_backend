@@ -7,44 +7,13 @@ from server.config import *
 from server.database import get_db
 from server.utils.minio import Minio
 
-
-class JobMixin:
-
-	@staticmethod
-	async def all() -> List:
-		ret = get_db()['jobs'].find()
-		return [Job(**i) async for i in ret]
-
-	@staticmethod
-	async def filter(**kwargs) -> List:
-		if not kwargs:
-			return await Job.all()
-		ret = get_db()['jobs'].find(kwargs)
-		return [Job(**i) async for i in ret]
-
-	@staticmethod
-	async def get(id):
-		ret = await get_db()['jobs'].find_one({'id': id})
-		return Job(**ret)
-
-	async def save(self):
-		await get_db()['jobs'].insert_one(self.dict())
-
-	async def update(self, **kwargs):
-		kwargs.update({'modified': datetime.now()})
-		await get_db()['jobs'].update_one(
-			{'id': self.id},
-			{'$set': kwargs},
-		)
-
-	async def delete(self) -> None:
-		await get_db()['jobs'].delete_one({'id': self.id})
+from ..core.mixins import DBModelMixin
 
 
 class JobIn(BaseModel):
 	pass
 
-class Job(BaseModel, JobMixin):
+class Job(BaseModel, DBModelMixin):
 	id: str = Field(default_factory=lambda: str(uuid4()))
 	assigned_to: str = ''
 	fragment_id: str
@@ -53,6 +22,9 @@ class Job(BaseModel, JobMixin):
 	transcript: str = ''
 	created: datetime = Field(default_factory=datetime.now)
 	modified: datetime = Field(default_factory=datetime.now)
+
+	class Meta:
+		collection_name = 'jobs'
 
 	# def validate_assigned_to():
 	# 	pass
