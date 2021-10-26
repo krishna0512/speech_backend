@@ -84,7 +84,7 @@ class Fragment(BaseModel, DBModelMixin):
 			# create the new jobs as it is.
 			# dont assign the new jobs to anyone i.e. jobs status is pending
 			a = await Job.create(self.id)
-			# await a.assign("admin")
+			await a.assign("admin")
 		return njobs
 
 	async def reject(self):
