@@ -7,7 +7,7 @@ from ..block.models import Block
 from .models import *
 
 router = APIRouter(
-	prefix='/fragments',
+	prefix='/speech_backend/fragments',
 	tags=['Fragment'],
 	# default campaign admin dependency
 	dependencies=[Depends(get_campaign_admin)]

@@ -13,6 +13,8 @@ from server.modules.user.routes import router as user_router
 app = FastAPI(
 	title='Speech Data API',
 	description='Comprehensive API for all the speech data related backend tasks',
+	docs_url='/speech_backend/docs',
+	openapi_url='/speech_backend/openapi.json',
 )
 
 origins = [
@@ -25,7 +27,7 @@ origins = ['*']
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,7 +38,7 @@ app.add_event_handler('shutdown', close_mongo_connection)
 
 app.include_router(
 	auth_router,
-	prefix='/auth',
+	prefix='/speech_backend/auth',
 	tags=['Auth'],
 )
 
@@ -51,31 +53,7 @@ app.include_router(block_router)
 app.include_router(fragment_router)
 app.include_router(job_router)
 
-# app.include_router(
-# 	audio_router,
-# 	prefix='/audio',
-# 	tags=['Audio'],
-# )
 
-# app.include_router(
-# 	fragment_audio_router,
-# 	prefix='/audio',
-# 	tags=['Audio-Fragment'],
-# )
-
-# app.include_router(
-# 	fragment_router,
-# 	prefix='/fragments',
-# 	tags=['Fragment'],
-# )
-
-# app.include_router(
-# 	job_router,
-# 	prefix='/jobs',
-# 	tags=['Job'],
-# )
-
-
-@app.post('/', tags=['Main'])
+@app.post('/speech_backend', tags=['Main'])
 async def index():
 	return {'detail': 'Hello World!'}

@@ -3,7 +3,7 @@ from server.modules.auth.dependencies import *
 
 from .models import *
 
-router = APIRouter()
+router = APIRouter(prefix='/speech_backend')
 
 @router.get('', response_model=List[UserOut])
 async def get_all_users(user: User = Depends(get_superuser)):

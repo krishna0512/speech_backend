@@ -7,7 +7,7 @@ from server.modules.auth.dependencies import *
 from .models import *
 
 router = APIRouter(
-	prefix='/jobs',
+	prefix='/speech_backend/jobs',
 	tags=['Job'],
 	# default campaign admin dependency
 	# dependencies=[Depends(get_campaign_admin)]
